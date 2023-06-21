@@ -1,0 +1,224 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: edgedevicesets.management.project-flotta.io
+spec:
+  group: management.project-flotta.io
+  names:
+    kind: EdgeDeviceSet
+    listKind: EdgeDeviceSetList
+    plural: edgedevicesets
+    singular: edgedeviceset
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: EdgeDeviceSet is the Schema for the edgedevicesets API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EdgeDeviceSetSpec defines the desired state of EdgeDeviceSet
+            properties:
+              heartbeat:
+                description: Heartbeat contains heartbeat messages configuration
+                properties:
+                  hardwareProfile:
+                    description: hardware profile
+                    properties:
+                      include:
+                        description: include
+                        type: boolean
+                      scope:
+                        description: 'scope Enum: [full delta]'
+                        type: string
+                    type: object
+                  periodSeconds:
+                    description: period seconds
+                    format: int64
+                    minimum: 1
+                    type: integer
+                type: object
+              logCollection:
+                additionalProperties:
+                  properties:
+                    bufferSize:
+                      default: 12
+                      format: int32
+                      minimum: 1
+                      type: integer
+                    kind:
+                      description: Kind is the type of log collection to be used
+                      enum:
+                      - syslog
+                      type: string
+                    syslogConfig:
+                      description: SyslogConfig is the pointer to the configMap to
+                        be used to load the config
+                      properties:
+                        name:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                  type: object
+                description: LogCollection contains configuration for device log collection
+                type: object
+              metrics:
+                description: Metrics contain metric collection and upload configuration
+                properties:
+                  dataTransfer:
+                    properties:
+                      allowList:
+                        description: AllowList defines name of a ConfigMap containing
+                          list of system metrics that should be scraped
+                        properties:
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      disabled:
+                        description: Disabled when set to true instructs the device
+                          to turn off system metrics collection
+                        type: boolean
+                      interval:
+                        default: 60
+                        description: Interval(in seconds) to scrape system metrics.
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    type: object
+                  receiverConfiguration:
+                    properties:
+                      caSecretName:
+                        type: string
+                      requestNumSamples:
+                        format: int64
+                        type: integer
+                      timeoutSeconds:
+                        format: int64
+                        type: integer
+                      url:
+                        type: string
+                    type: object
+                  retention:
+                    properties:
+                      maxHours:
+                        description: MaxHours specifies how long should persisted
+                          metrics be stored on the device disk
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      maxMiB:
+                        description: MaxMiB specifies how much disk space should be
+                          used for storing persisted metrics on the device
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    type: object
+                  system:
+                    properties:
+                      allowList:
+                        description: AllowList defines name of a ConfigMap containing
+                          list of system metrics that should be scraped
+                        properties:
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      disabled:
+                        description: Disabled when set to true instructs the device
+                          to turn off system metrics collection
+                        type: boolean
+                      interval:
+                        default: 60
+                        description: Interval(in seconds) to scrape system metrics.
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    type: object
+                type: object
+              mounts:
+                description: Mounts contains mount configuration
+                items:
+                  properties:
+                    device:
+                      description: Device path to be mounted
+                      type: string
+                    folder:
+                      description: Destination directory path
+                      type: string
+                    options:
+                      description: Mount options (i.e. rw, suid, dev)
+                      type: string
+                    type:
+                      description: 'Mount type: (i.e ext4)'
+                      type: string
+                  type: object
+                type: array
+              osInformation:
+                description: OsInformation carries information about commit ID of
+                  the OS Image deployed to the device
+                properties:
+                  automaticallyUpgrade:
+                    description: Automatically upgrade the OS image
+                    type: boolean
+                  commitID:
+                    description: CommitID carries information about commit of the
+                      OS Image
+                    type: string
+                  hostedObjectsURL:
+                    description: HostedObjectsURL carries the URL of the hosted commits
+                      web server
+                    type: string
+                type: object
+              storage:
+                description: Storage contains data upload configuration
+                properties:
+                  s3:
+                    properties:
+                      configMapName:
+                        description: configMap name
+                        type: string
+                      createOBC:
+                        description: createOBC. if the configuration above is empty
+                          and this bool is true then create OBC
+                        type: boolean
+                      secretName:
+                        description: secret name
+                        type: string
+                    type: object
+                type: object
+            type: object
+          status:
+            description: EdgeDeviceSetStatus defines the observed state of EdgeDeviceSet
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

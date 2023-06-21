@@ -1,0 +1,5 @@
+---
+extends: spectral:oas
+rules:
+  oas2-unused-definition: off  # yamllint disable-line rule:truthy
+  oas2-api-host: off  # yamllint disable-line rule:truthy

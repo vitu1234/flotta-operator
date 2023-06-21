@@ -1,0 +1,22 @@
+apiVersion: management.project-flotta.io/v1alpha1
+kind: EdgeWorkload
+metadata:
+  name: edgeworkload-sample
+spec:
+  deviceSelector:
+    matchLabels:
+      foo: bar
+  #  device: 242e48d0-286b-4170-9b97-95502066e6ae
+  data:
+    paths:
+      - source: .
+        target: nginx
+  type: pod
+  pod:
+    spec:
+      containers:
+        - name: nginx
+          image: docker.io/nginx:1.14.2
+          ports:
+            - containerPort: 80
+              hostPort: 9090

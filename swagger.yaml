@@ -1,0 +1,906 @@
+---
+swagger: '2.0'
+info:
+  description: Flotta Edge Management
+  version: 1.0.0
+  title: FlottaManagement
+  contact:
+    name: Flotta flotta
+    url: 'https://github.com/project-flotta'
+    email: flotta@redhat.com
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+basePath: /api/flotta-management/v1
+tags:
+  - name: devices
+    description: Device management
+  - name: yggdrasil
+    description: API to communicate with Yggdrasil daemon over HTTP
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+securityDefinitions:
+  agentAuth:
+    type: apiKey
+    in: header
+    name: X-Secret-Key
+paths:
+  '/data/{device_id}/in':
+    get:
+      description: Get data message for device API
+      operationId: GetDataMessageForDevice
+      tags:
+        - yggdrasil
+      parameters:
+        - in: path
+          name: device_id
+          description: Device ID
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/message'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Error
+        '500':
+          description: Error
+  '/data/{device_id}/out':
+    post:
+      description: Post data message for device API
+      operationId: PostDataMessageForDevice
+      tags:
+        - yggdrasil
+      parameters:
+        - in: path
+          name: device_id
+          description: Device ID
+          type: string
+          required: true
+        - in: body
+          name: message
+          required: true
+          schema:
+            $ref: '#/definitions/message'
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/message-response'
+        '208':
+          description: Already Reported
+        '400':
+          description: Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Error
+        '500':
+          description: Error
+  '/control/{device_id}/in':
+    get:
+      description: Get control message for device API
+      operationId: GetControlMessageForDevice
+      tags:
+        - yggdrasil
+      parameters:
+        - in: path
+          name: device_id
+          description: Device ID
+          type: string
+          required: true
+      responses:
+        '200':
+          description: Success
+          schema:
+            $ref: '#/definitions/message'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Error
+        '500':
+          description: Error
+  '/control/{device_id}/out':
+    post:
+      description: Post control message for device API
+      operationId: PostControlMessageForDevice
+      tags:
+        - yggdrasil
+      parameters:
+        - in: path
+          name: device_id
+          description: Device ID
+          type: string
+          required: true
+        - in: body
+          name: message
+          required: true
+          schema:
+            $ref: '#/definitions/message'
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Error
+        '500':
+          description: Error
+definitions:
+  device-configuration-message:
+    type: object
+    properties:
+      device_id:
+        type: string
+        description: Device identifier
+      version:
+        type: string
+      configuration:
+        $ref: '#/definitions/device-configuration'
+      workloads:
+        $ref: '#/definitions/workload-list'
+      workloads_monitoring_interval:
+        type: integer
+        minimum: 0
+        exclusiveMinimum: true
+        description: >-
+          Defines the interval in seconds between the attempts to evaluate the
+          workloads status and restart those that failed
+      secrets:
+        $ref: '#/definitions/secret-list'
+  device-configuration:
+    type: object
+    properties:
+      ansible-manager:
+        $ref: '#/definitions/ansible-manager-configuration'
+      heartbeat:
+        $ref: '#/definitions/heartbeat-configuration'
+      storage:
+        $ref: '#/definitions/storage-configuration'
+      metrics:
+        $ref: '#/definitions/metrics-configuration'
+      os:
+        $ref: '#/definitions/os-information'
+      log-collection:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/logs-collection-information'
+      mounts:
+        type: array
+        items:
+          $ref: '#/definitions/mount'
+
+  metrics-receiver-configuration:
+    type: object
+    properties:
+      url:
+        type: string
+      timeout_seconds:
+        type: integer
+      request_num_samples:
+        type: integer
+      caCert:
+        type: string
+  logs-collection-information:
+    description: Log collection information
+    type: object
+    properties:
+      kind:
+        type: string
+      buffer_size:
+        type: integer
+        format: int32
+      syslog_config:
+        type: object
+        properties:
+          address:
+            type: string
+          protocol:
+            type: string
+  os-information:
+    description: OS lifecycle information
+    type: object
+    properties:
+      commit_id:
+        type: string
+        description: the last commit ID
+      hosted_objects_url:
+        type: string
+        description: the URL of the hosted commits web server
+      automatically_upgrade:
+        type: boolean
+        description: automatically upgrade the OS image
+  ansible-manager-configuration:
+    type: object
+    properties:
+      period_seconds:
+        type: integer
+  heartbeat-configuration:
+    type: object
+    properties:
+      period_seconds:
+        type: integer
+      hardware_profile:
+        $ref: '#/definitions/hardware-profile-configuration'
+  hardware-profile-configuration:
+    type: object
+    properties:
+      include:
+        type: boolean
+      scope:
+        type: string
+        enum:
+          - full
+          - delta
+  storage-configuration:
+    type: object
+    properties:
+      s3:
+        $ref: '#/definitions/s3-storage-configuration'
+  s3-storage-configuration:
+    type: object
+    properties:
+      bucket_host:
+        type: string
+      bucket_port:
+        type: integer
+        format: int32
+      bucket_name:
+        type: string
+      bucket_region:
+        type: string
+      aws_access_key_id:
+        type: string
+      aws_secret_access_key:
+        type: string
+      aws_ca_bundle:
+        type: string
+  metrics-configuration:
+    description: Defines metrics configuration for the device
+    type: object
+    properties:
+      retention:
+        $ref: '#/definitions/metrics-retention'
+      system:
+        $ref: '#/definitions/component-metrics-configuration'
+      data-transfer:
+        $ref: '#/definitions/component-metrics-configuration'
+      receiver:
+        $ref: '#/definitions/metrics-receiver-configuration'
+  metrics-retention:
+    description: Defines metrics data retention limits
+    type: object
+    properties:
+      max_mib:
+        description: Maximum size of metrics stored on disk
+        type: integer
+        format: int32
+      max_hours:
+        description: Maximum time in hours metrics data files should kept on the device
+        type: integer
+        format: int32
+  component-metrics-configuration:
+    description: >-
+      Device component's metrics gathering configuration. Used by the system
+      (aka node-exporter) and data transfer services.
+    type: object
+    properties:
+      interval:
+        description: Interval(in seconds) to scrape metrics endpoint.
+        type: integer
+        format: int32
+      allow_list:
+        $ref: '#/definitions/metrics-allow-list'
+      disabled:
+        description: 'When true, turns metrics collection off. False by default.'
+        type: boolean
+  metrics-allow-list:
+    description: Specification of system metrics to be collected
+    type: object
+    properties:
+      names:
+        type: array
+        items:
+          type: string
+  workload-list:
+    description: List of workloads deployed to the device
+    type: array
+    items:
+      $ref: '#/definitions/workload'
+  workload:
+    type: object
+    properties:
+      name:
+        description: Name of the workload
+        type: string
+      namespace:
+        description: Namespace of the workload
+        type: string
+      labels:
+        type: object
+        description: Workload labels
+        additionalProperties:
+          type: string
+      specification:
+        type: string
+      data:
+        $ref: '#/definitions/data-configuration'
+      imageRegistries:
+        $ref: '#/definitions/image-registries'
+      metrics:
+        $ref: '#/definitions/metrics'
+      configmaps:
+        $ref: '#/definitions/configmap-list'
+      log_collection:
+        description: Log collection target for this workload
+        type: string
+      annotations:
+        type: object
+        description: Workload Annotations
+        additionalProperties:
+          type: string
+  secret-list:
+    description: List of secrets used by the workloads
+    type: array
+    items:
+      $ref: '#/definitions/secret'
+  configmap-list:
+    description: List of configmaps used by the workload
+    type: array
+    items:
+      description: ConfigMap kubernetes yaml specification
+      type: string
+  secret:
+    type: object
+    properties:
+      name:
+        description: Name of the secret
+        type: string
+      data:
+        description: The secret's data section in JSON format
+        type: string
+  metrics:
+    description: Metrics endpoint configuration
+    type: object
+    properties:
+      path:
+        description: Path to use when retrieving metrics
+        type: string
+      port:
+        type: integer
+        format: int32
+      allow_list:
+        $ref: '#/definitions/metrics-allow-list'
+      interval:
+        description: Interval(in seconds) to scrape metrics endpoint.
+        type: integer
+        format: int32
+      containers:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/container-metrics'
+  container-metrics:
+    description: Metrics container configuration
+    type: object
+    properties:
+      disabled:
+        type: boolean
+      path:
+        description: Path to use when retrieving metrics
+        type: string
+      port:
+        description: Port to use when retrieve the metrics
+        type: integer
+        format: int32
+  image-registries:
+    description: Image registries configuration
+    type: object
+    properties:
+      authFile:
+        description: >-
+          Image registries authfile created by executing `podman login` or
+          `docker login` (i.e. ~/.docker/config.json).
+          https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/#log-in-to-docker-hub
+          describes how the file can be created and how it is structured.
+        type: string
+  data-configuration:
+    description: Configuration for data transfer
+    type: object
+    properties:
+      ingress:
+        type: array
+        items:
+          $ref: '#/definitions/data-path'
+      egress:
+        type: array
+        items:
+          $ref: '#/definitions/data-path'
+  data-path:
+    type: object
+    description: Device-to-control plane paths mapping
+    properties:
+      source:
+        description: Path in the workload container
+        type: string
+      target:
+        description: Path in the control plane storage
+        type: string
+  enrolment-info:
+    type: object
+    properties:
+      features:
+        type: object
+        properties:
+          modelName:
+            type: string
+          hardware:
+            $ref: '#/definitions/hardware-info'
+      target_namespace:
+        type: string
+        default: default
+  registration-response:
+    type: object
+    properties:
+      certificate:
+        description: Client certificate to be used in future operations
+        type: string
+  registration-info:
+    type: object
+    properties:
+      hardware:
+        $ref: '#/definitions/hardware-info'
+      certificate_request:
+        description: Certificate Signing Request to be signed by flotta-operator CA
+        type: string
+  hardware-info:
+    description: Hardware information
+    type: object
+    properties:
+      hostname:
+        type: string
+      interfaces:
+        type: array
+        items:
+          $ref: '#/definitions/interface'
+      disks:
+        type: array
+        items:
+          $ref: '#/definitions/disk'
+      boot:
+        $ref: '#/definitions/boot'
+      system_vendor:
+        $ref: '#/definitions/system_vendor'
+      memory:
+        $ref: '#/definitions/memory'
+      cpu:
+        $ref: '#/definitions/cpu'
+      gpus:
+        type: array
+        items:
+          $ref: '#/definitions/gpu'
+      host_devices:
+        type: array
+        items:
+          $ref: '#/definitions/host_device'
+      mounts:
+        type: array
+        items:
+          $ref: '#/definitions/mount'
+      connected_wireless_devices:
+          $ref: '#/definitions/connected_wireless_devices'
+
+  interface:
+    type: object
+    properties:
+      ipv6_addresses:
+        type: array
+        items:
+          type: string
+      vendor:
+        type: string
+      name:
+        type: string
+      has_carrier:
+        type: boolean
+      product:
+        type: string
+      mtu:
+        type: integer
+      ipv4_addresses:
+        type: array
+        items:
+          type: string
+      biosdevname:
+        type: string
+      client_id:
+        type: string
+      mac_address:
+        type: string
+      flags:
+        type: array
+        items:
+          type: string
+      speed_mbps:
+        type: integer
+  disk:
+    type: object
+    properties:
+      id:
+        description: >-
+          Determine the disk's unique identifier which is the by-id field if it
+          exists and fallback to the by-path field otherwise
+        type: string
+      drive_type:
+        type: string
+      vendor:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      hctl:
+        type: string
+      by_path:
+        description: by-path is the shortest physical path to the device
+        type: string
+      by_id:
+        type: string
+        description: >-
+          by-id is the World Wide Number of the device which guaranteed to be
+          unique for every storage device
+      model:
+        type: string
+      wwn:
+        type: string
+      serial:
+        type: string
+      size_bytes:
+        type: integer
+      bootable:
+        type: boolean
+      is_installation_media:
+        description: Whether the disk appears to be an installation media or not
+        type: boolean
+      smart:
+        type: string
+      io_perf:
+        $ref: '#/definitions/io_perf'
+  io_perf:
+    type: object
+    properties:
+      sync_duration:
+        description: 99th percentile of fsync duration in milliseconds
+        type: integer
+  boot:
+    type: object
+    properties:
+      current_boot_mode:
+        type: string
+      pxe_interface:
+        type: string
+  system_vendor:
+    type: object
+    properties:
+      serial_number:
+        type: string
+      product_name:
+        type: string
+      manufacturer:
+        type: string
+      virtual:
+        description: Whether the machine appears to be a virtual machine or not
+        type: boolean
+  memory:
+    type: object
+    properties:
+      physical_bytes:
+        type: integer
+      usable_bytes:
+        type: integer
+  cpu:
+    type: object
+    properties:
+      count:
+        type: integer
+      frequency:
+        type: number
+      flags:
+        type: array
+        items:
+          type: string
+      model_name:
+        type: string
+      architecture:
+        type: string
+  gpu:
+    type: object
+    properties:
+      vendor:
+        description: The name of the device vendor (for example "Intel Corporation")
+        type: string
+      vendor_id:
+        description: ID of the vendor (for example "8086")
+        type: string
+      device_id:
+        description: ID of the device (for example "3ea0")
+        type: string
+      name:
+        description: >-
+          Product name of the device (for example "UHD Graphics 620 (Whiskey
+          Lake)")
+        type: string
+      address:
+        description: 'Device address (for example "0000:00:02.0")'
+        type: string
+  host_device:
+    type: object
+    properties:
+      path:
+        description: Path of the device
+        type: string
+      device_type:
+        description: Type of the device
+        type: string
+      uid:
+        description: Owner id
+        type: integer
+      gid:
+        description: Group id
+        type: integer
+      major:
+        description: Major of the device
+        type: integer
+      minor:
+        description: Minor of the device
+        type: integer
+
+  mount:
+    type: object
+    properties:
+      device:
+        description: path of the device to be mounted
+        type: string
+      directory:
+        description: destination directory
+        type: string
+      type:
+        description: type of the mount
+        type: string
+      options:
+        description: mount options
+        type: string
+
+  connected_wireless_devices:
+    type: object
+    properties:
+      tenant_id:
+        description: unique identifier for lorawan property based on organizations or teams
+        type: string
+      tenant_name:
+        description: lorawan property based on for name of organizations or teams
+        type: string
+      application_id:
+        description: lorawan property for organization or team apps
+        type: string
+      application_name:
+        description: lorawan property for an application
+        type: string
+      device_profile_id: 
+        description: lorawan property for a lora device profile
+        type: string
+      device_profile_name: 
+        description: lorawan property device template
+        type: string
+      device_name:
+        description: connected device name
+        type: string
+      dev_eui: 
+        description: uniquie identifier of the device
+        type: string
+      dev_addr:
+        description: device address
+        type: string
+      battery: 
+        description: percentage of battery
+        type: string
+      data: 
+        description: data sent by the connected device
+        type: string
+      confirmed: 
+        description: if device is registered on the network
+        type: boolean
+      last_seen:
+        description: last time the device connected
+        type: string
+      location:
+        $ref: '#/definitions/location'
+      region:
+        $ref: '#/definitions/region'
+      transmit_info:
+        $ref: '#/definitions/transmit_info'
+        
+
+  location:
+    type: object
+    properties:
+      latitude:
+        type: string
+      longitude:
+        type: string
+  region:
+    type: object
+    properties:
+      bandwidth:
+        type: string
+  transmit_info:
+    type: object
+    properties:
+      frequency: 
+        type: string
+      power:
+        type: string
+      spreading_factor:
+        type: string
+      code_rate: 
+        type: string
+      polarization_inversion:
+        type: string
+
+
+  heartbeat:
+    type: object
+    properties:
+      status:
+        type: string
+        enum:
+          - up
+          - degraded
+      version:
+        type: string
+      workloads:
+        type: array
+        items:
+          $ref: '#/definitions/workload-status'
+      playbook-executions:
+        type: array
+        items:
+          $ref: '#/definitions/playbook-execution-status'
+      upgrade:
+        $ref: '#/definitions/upgrade-status'
+      hardware:
+        $ref: '#/definitions/hardware-info'
+      events:
+        description: Events produced by device worker.
+        type: array
+        items:
+          $ref: '#/definitions/event-info'
+  event-info:
+    type: object
+    properties:
+      reason:
+        description: Reason is single word description of the subject of the event.
+        type: string
+      message:
+        description: Message describe the event which has occured.
+        type: string
+      type:
+        description: 'Either ''info'' or ''warn'', which reflect the importance of event.'
+        type: string
+        enum:
+          - info
+          - warn
+  playbook-execution-status:
+    type: object
+    properties:
+      name:
+        type: string
+      last_data_upload:
+        type: string
+        format: date-time
+      status:
+        type: string
+        enum:
+          - Deploying
+          - TargetVerification
+          - Running
+          - SuccessfullyCompleted
+          - CompletedWithError
+  workload-status:
+    type: object
+    properties:
+      name:
+        type: string
+      last_data_upload:
+        type: string
+        format: date-time
+      status:
+        type: string
+        enum:
+          - deploying
+          - running
+          - crashed
+          - stopped
+  upgrade-status:
+    description: Upgrade status
+    type: object
+    properties:
+      current_commit_ID:
+        type: string
+      last_upgrade_status:
+        type: string
+        enum:
+          - succeeded
+          - failed
+      last_upgrade_time:
+        type: string
+  message-response:
+    type: object
+    properties:
+      message_id:
+        type: string
+      directive:
+        type: string
+      content:
+        description: Content
+      metadata:
+        type: object
+  message:
+    type: object
+    properties:
+      type:
+        type: string
+        enum:
+          - connection-status
+          - command
+          - event
+          - data
+      message_id:
+        type: string
+      response_to:
+        type: string
+      version:
+        type: integer
+      sent:
+        type: string
+        format: date-time
+      directive:
+        type: string
+      metadata:
+        type: object
+      content:
+        description: Content
+
+  playbook-execution:
+    type: object
+    properties:
+      last_data_upload:
+        type: string
+        format: date-time
+      name:
+        type: string
+        description: >-
+          Returns the ansible playbookexecution name.
+      ansible_playbook_string:
+        type: string
+        description: >-
+          Returns the ansible playbook as a string.
+
+  playbook-executions-response:
+    type: array
+    items:
+      $ref: '#/definitions/playbook-execution'

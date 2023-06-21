@@ -1,0 +1,120 @@
+#!/bin/bash
+
+set -e
+
+usage()
+{
+cat << EOF
+Usage: $0 OPTIONS
+This script installs Flotta agent component on RPM-compatible machine.
+OPTIONS:
+   -h      Show this message
+   -i      IP address under which your Flotta edge API endpoint is accessible to the device.
+           For testing, when your KUBECONFIG is pointing to cluster with Flotta operator deployed, you can run
+
+           kubectl port-forward service/flotta-edge-api -n flotta 8043 --address 0.0.0.0
+   -p      Port to connect to Flotta API, default 8043
+   -t      Indicates if to use testing repository, default is false
+EOF
+}
+
+while getopts "i:h:p:t" option; do
+    case "${option}"
+    in
+        i) FLOTTA_API_IP=${OPTARG};;
+        p) FLOTTA_PORT=${OPTARG};;
+        t) TESTING_REPO=0;;
+        h)
+            usage
+            exit 0
+            ;;
+        *)
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [[ -z $FLOTTA_API_IP ]]; then
+    echo "ERROR: Flotta API IP is required"
+    usage
+    exit 1
+fi
+
+TESTING_SUFFIX=""
+if [[ -n $TESTING_REPO ]]; then
+    TESTING_SUFFIX="-testing"
+fi
+
+VERSION=$(grep ^VERSION_ID /etc/os-release | cut -d= -f2)
+curl -s https://copr.fedorainfracloud.org/coprs/project-flotta/flotta${TESTING_SUFFIX}/repo/fedora-${VERSION}/project-flotta-flotta-fedora-${VERSION}.repo -o /etc/yum.repos.d/project-flotta.repo
+rpm-ostree install node_exporter yggdrasil flotta-agent
+
+cat <<EOF >> /etc/hosts
+$FLOTTA_API_IP project-flotta.io
+EOF
+
+mkdir -p /etc/pki/consumer
+cat <<EOF > /etc/pki/consumer/ca.pem
+<CA_PEM>
+EOF
+
+cat <<EOF > /etc/pki/consumer/key.pem
+<KEY_PEM>
+EOF
+
+cat <<EOF > /etc/pki/consumer/cert.pem
+<CERT_PEM>
+EOF
+
+
+function get_client_id() {
+  if [ -f "/etc/device-credentials" ]; then
+    /usr/libexec/fdo/fdo-owner-tool dump-device-credential /etc/device-credentials | grep "Device GUID" | awk '{print $NF}'
+  else
+    cat /etc/machine-id
+  fi
+}
+
+mkdir -p /var/yggdrasil-init
+cat <<EOF >/usr/local/bin/init-yggrasild.sh
+#!/bin/bash
+cat <<INTERNAL > /etc/yggdrasil/config.toml
+<CONFIG_TOML>
+INTERNAL
+
+systemctl disable init-yggd.service
+sed -i "s/FLOTTA_XDG_RUNTIME_DIR=/FLOTTA_XDG_RUNTIME_DIR=\/run\/user\/\$(id -u flotta)/g" /etc/yggdrasil/workers/device-worker.toml
+
+rm /etc/systemd/system/init-yggd.service
+rm -rf /usr/local/bin/init-yggrasild.sh
+EOF
+
+chmod 744 /usr/local/bin/init-yggrasild.sh
+
+cat <<EOF >/etc/systemd/system/init-yggd.service
+[Unit]
+Description=Initialize yggdrasild configuration.
+Before=yggdrasild.service
+After=flotta-agent.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/init-yggrasild.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+chmod 644 /etc/systemd/system/init-yggd.service
+
+systemctl enable init-yggd.service
+
+systemctl enable podman.service
+systemctl enable podman.socket
+systemctl is-active firewalld && systemctl disable firewalld; systemctl stop firewalld || true
+ln -s /usr/lib/systemd/system/node_exporter.service /etc/systemd/system/multi-user.target.wants/node_exporter.service
+ln -s /usr/lib/systemd/system/yggdrasild.service /etc/systemd/system/multi-user.target.wants/yggdrasild.service
+ln -s /usr/lib/systemd/system/nftables.service /etc/systemd/system/multi-user.target.wants/nftables.service
+
+systemctl reboot

@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: flotta
+
+# Value of this field is prepended to the
+# names of all resources, e.g. a deployment named
+# "wordpress" becomes "alices-wordpress".
+# Note that it should also match with the prefix (text before '-') of the namespace
+# field above.
+namePrefix: flotta-
+
+resources:
+  - ../base
+  - ../network
+
+patchesJson6902:
+  - target:
+      group: route.openshift.io
+      version: v1
+      kind: Route
+      name: edge-api
+    patch: |-
+      - op: replace
+        path: /spec/host
+        value: project-flotta.io

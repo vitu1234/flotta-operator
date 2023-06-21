@@ -1,0 +1,23 @@
+---
+name: "Image upload"
+on:  # yamllint disable-line rule:truthy
+  push:
+    branches: [main]
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out proper version of sources
+        uses: actions/checkout@v1
+
+      - name: Login to quay
+        env:
+          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+        run: |
+          echo "$QUAY_TOKEN" | docker login quay.io --username project-flotta+github --password-stdin
+
+      - name: Build & push the container image to quay
+        run: |
+          HTTP_IMG=quay.io/project-flotta/flotta-edge-api IMG=quay.io/project-flotta/flotta-operator make docker-build
+          HTTP_IMG=quay.io/project-flotta/flotta-edge-api IMG=quay.io/project-flotta/flotta-operator make docker-push

@@ -1,0 +1,20 @@
+# permissions for end users to view edgeworkloads.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: edgeworkload-viewer-role
+rules:
+- apiGroups:
+  - management.project-flotta.io
+  resources:
+  - edgeworkloads
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - management.project-flotta.io
+  resources:
+  - edgeworkloads/status
+  verbs:
+  - get
