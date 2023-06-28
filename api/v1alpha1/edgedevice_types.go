@@ -465,17 +465,19 @@ type WirelessDeviceInfo struct {
 }
 
 type Location struct {
-	Longitude string `json:"longitude,omitempty"`
-	Latitude  string `json:"latitude,omitempty"`
+	Longitude      string `json:"longitude,omitempty"`
+	Latitude       string `json:"latitude,omitempty"`
+	LocationSource string `json:"latitude,omitempty"`
 }
 
 type Region struct {
-	Bandwidth string `json:"bandwidth,omitempty"`
+	RegionName string `json:"regionName,omitempty"`
+	Bandwidth  int64  `json:"bandwidth,omitempty"`
 }
 type TransmitInfo struct {
-	Frequency             string `json:"frequency,omitempty"`
+	Frequency             int64  `json:"frequency,omitempty"`
 	Power                 string `json:"power,omitempty"`
-	SpreadingFactor       string `json:"spreadingFactor,omitempty"`
+	SpreadingFactor       int64  `json:"spreadingFactor,omitempty"`
 	CodeRate              string `json:"codeRate,omitempty"`
 	PolarizationInversion bool   `json:"polarizationInversion,omitempty"`
 }
