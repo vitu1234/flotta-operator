@@ -8,8 +8,9 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/project-flotta/flotta-operator/internal/edgeapi"
 	"go.uber.org/zap"
+
+	"github.com/project-flotta/flotta-operator/internal/edgeapi"
 )
 
 var Config edgeapi.Config

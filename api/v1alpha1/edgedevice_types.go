@@ -146,6 +146,8 @@ type EdgeDeviceStatus struct {
 	PlaybookExecutions        []PlaybookExec      `json:"PlaybookExec,omitempty"`
 	DataOBC                   *string             `json:"dataObc,omitempty"`
 	UpgradeInformation        *UpgradeInformation `json:"upgradeInformation,omitempty"`
+	//list connected wireless devices
+	WirelessDevices []*WirelessDevices `json:"connectedWirelessDevices,omitempty"`
 }
 
 type EdgeWorkloadPhase string
@@ -208,9 +210,6 @@ type Hardware struct {
 
 	// list of all mounts found on edgedevice
 	Mounts []*Mount `json:"mounts,omitempty"`
-
-	//list connected wireless devices
-	ConnectedWirelessDevices ConnectedWirelessDevices `json:"connectedWirelessDevices,omitempty"`
 }
 
 type Boot struct {
@@ -430,11 +429,11 @@ type Mount struct {
 	Options string `json:"options,omitempty"`
 }
 
-type ConnectedWirelessDevices struct {
+type WirelessDevices struct {
 	WirelessInterfaceType WirelessInterfaceType `json:"wirelessInterfaceType"`
-	WirelessDeviceInfo    WirelessDeviceInfo    `json:"wirelessDeviceInfo"`
+	WirelessDeviceInfo    WirelessDeviceInfo    `json:"wirelessDeviceInfo,omitempty"`
 	// models.HardwareInfo
-	// PreferedResources []PreferedResources `json:"preferredResources"`
+
 }
 type WirelessInterfaceType string
 
@@ -467,7 +466,7 @@ type WirelessDeviceInfo struct {
 type Location struct {
 	Longitude      string `json:"longitude,omitempty"`
 	Latitude       string `json:"latitude,omitempty"`
-	LocationSource string `json:"latitude,omitempty"`
+	LocationSource string `json:"locationSource,omitempty"`
 }
 
 type Region struct {

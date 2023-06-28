@@ -247,6 +247,77 @@ spec:
                   - name
                   type: object
                 type: array
+              connectedWirelessDevices:
+                description: list connected wireless devices
+                items:
+                  properties:
+                    wirelessDeviceInfo:
+                      properties:
+                        applicationId:
+                          type: string
+                        applicationName:
+                          type: string
+                        battery:
+                          type: string
+                        confirmed:
+                          type: boolean
+                        data:
+                          type: string
+                        devAddr:
+                          type: string
+                        devEui:
+                          type: string
+                        deviceName:
+                          type: string
+                        deviceProfileId:
+                          type: string
+                        deviceProfileName:
+                          type: string
+                        lastSeen:
+                          type: string
+                        location:
+                          properties:
+                            latitude:
+                              type: string
+                            locationSource:
+                              type: string
+                            longitude:
+                              type: string
+                          type: object
+                        region:
+                          properties:
+                            bandwidth:
+                              format: int64
+                              type: integer
+                            regionName:
+                              type: string
+                          type: object
+                        tenantId:
+                          type: string
+                        tenantName:
+                          type: string
+                        transmitInfo:
+                          properties:
+                            codeRate:
+                              type: string
+                            frequency:
+                              format: int64
+                              type: integer
+                            polarizationInversion:
+                              type: boolean
+                            power:
+                              type: string
+                            spreadingFactor:
+                              format: int64
+                              type: integer
+                          type: object
+                      type: object
+                    wirelessInterfaceType:
+                      type: string
+                  required:
+                  - wirelessInterfaceType
+                  type: object
+                type: array
               dataObc:
                 type: string
               hardware:
@@ -260,69 +331,6 @@ spec:
                       pxeInterface:
                         description: pxe interface
                         type: string
-                    type: object
-                  connectedWirelessDevices:
-                    description: list connected wireless devices
-                    properties:
-                      wirelessDeviceInfo:
-                        properties:
-                          applicationId:
-                            type: string
-                          applicationName:
-                            type: string
-                          battery:
-                            type: string
-                          confirmed:
-                            type: boolean
-                          data:
-                            type: string
-                          devAddr:
-                            type: string
-                          devEui:
-                            type: string
-                          deviceName:
-                            type: string
-                          deviceProfileId:
-                            type: string
-                          deviceProfileName:
-                            type: string
-                          lastSeen:
-                            type: string
-                          location:
-                            properties:
-                              latitude:
-                                type: string
-                              longitude:
-                                type: string
-                            type: object
-                          region:
-                            properties:
-                              bandwidth:
-                                type: string
-                            type: object
-                          tenantId:
-                            type: string
-                          tenantName:
-                            type: string
-                          transmitInfo:
-                            properties:
-                              codeRate:
-                                type: string
-                              frequency:
-                                type: string
-                              polarizationInversion:
-                                type: boolean
-                              power:
-                                type: string
-                              spreadingFactor:
-                                type: string
-                            type: object
-                        type: object
-                      wirelessInterfaceType:
-                        type: string
-                    required:
-                    - wirelessDeviceInfo
-                    - wirelessInterfaceType
                     type: object
                   cpu:
                     description: cpu

@@ -6,16 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"log"
-	"math/rand"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-
 	"github.com/kelseyhightower/envconfig"
 	obv1 "github.com/kube-object-storage/lib-bucket-provisioner/pkg/apis/objectbucket.io/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
@@ -23,6 +21,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -46,7 +45,6 @@ import (
 	"github.com/project-flotta/flotta-operator/pkg/mtls"
 	"github.com/project-flotta/flotta-operator/restapi"
 	"github.com/project-flotta/flotta-operator/restapi/operations"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -353,8 +351,8 @@ func processMqttData(payload string) {
 	fmt.Printf("Received message:\n%+v\n", message.ApplicationName)
 	clientConfig, err := getRestConfig(Config.Kubeconfig)
 	if err != nil {
-		fmt.Errorf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
-		panic(err.Error())
+		fmt.Printf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
+		// panic(err.Error())
 	}
 
 	// Create a new Kubernetes client
@@ -363,6 +361,9 @@ func processMqttData(payload string) {
 		log.Fatalf("Failed to create Kubernetes client: %v", err)
 	}
 	c, err := getClient(clientConfig, client.Options{Scheme: scheme})
+	if err != nil {
+		fmt.Printf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
+	}
 
 	// Get a list of all namespaces
 	nsList, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
@@ -395,31 +396,52 @@ func processMqttData(payload string) {
 
 func processDevice(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client) {
 
-	edgeDevice.Status.Hardware.ConnectedWirelessDevices.WirelessInterfaceType = managementv1alpha1.WirelessInterfaceTypeLora
-	wirelessInfo := edgeDevice.Status.Hardware.ConnectedWirelessDevices.WirelessDeviceInfo
-	wirelessInfo.TenantId = msg.TenantID
-	wirelessInfo.TenantName = msg.TenantName
-	wirelessInfo.ApplicationId = msg.ApplicationID
-	wirelessInfo.ApplicationName = msg.ApplicationName
-	wirelessInfo.DeviceProfileId = msg.DeviceProfileID
-	wirelessInfo.DeviceProfileName = msg.DeviceProfileName
-	wirelessInfo.DeviceName = msg.DeviceName
-	wirelessInfo.DevEui = msg.DevEUI
-	wirelessInfo.DevAddr = msg.DevAddr
-	wirelessInfo.Data = msg.Data
-	wirelessInfo.Confirmed = msg.Confirmed
-	wirelessInfo.Location.Latitude = msg.Latitude
-	wirelessInfo.Location.Longitude = msg.Longitude
-	wirelessInfo.Region.Bandwidth = msg.Bandwidth
-	wirelessInfo.TransmitInfo.Frequency = msg.Frequency
-	wirelessInfo.TransmitInfo.SpreadingFactor = msg.SpreadingFactor
-	wirelessInfo.TransmitInfo.CodeRate = msg.CodeRate
-	wirelessInfo.LastSeen = msg.Time
-	wirelessInfo.Region.RegionName = msg.RegionName
-	wirelessInfo.Location.LocationSource = msg.LocationSource
+	connectedDevice := &managementv1alpha1.WirelessDevices{
+		WirelessInterfaceType: managementv1alpha1.WirelessInterfaceTypeLora,
+		WirelessDeviceInfo: managementv1alpha1.WirelessDeviceInfo{
+			TenantId:          msg.TenantID,
+			TenantName:        "VitudnbdhdhdhTenantName",
+			ApplicationId:     msg.ApplicationID,
+			ApplicationName:   msg.ApplicationName,
+			DeviceProfileId:   msg.DeviceProfileID,
+			DeviceProfileName: msg.DeviceProfileName,
+			DeviceName:        msg.DeviceName,
+			DevEui:            msg.DevEUI,
+			DevAddr:           msg.DevAddr,
+			Location: managementv1alpha1.Location{
+				Latitude:  msg.Latitude,
+				Longitude: msg.Longitude,
+			},
+			Region: managementv1alpha1.Region{
+				Bandwidth: msg.Bandwidth,
+			},
+			TransmitInfo: managementv1alpha1.TransmitInfo{
+				Frequency:       msg.Frequency,
+				SpreadingFactor: msg.SpreadingFactor,
+				CodeRate:        msg.CodeRate,
+			},
+			LastSeen: msg.Time,
+		},
+	}
+	index := -1
+	for i, device := range edgeDevice.Status.WirelessDevices {
+		if device.WirelessDeviceInfo.DevEui == msg.DevEUI {
+			index = i
+			break
+		}
+	}
 
-	// Update the EdgeDevice CR
-	err := c.Update(context.TODO(), edgeDevice)
+	if index != -1 {
+		edgeDevice.Status.WirelessDevices = append(edgeDevice.Status.WirelessDevices[:index], edgeDevice.Status.WirelessDevices[index+1:]...)
+		fmt.Println("Element removed from the array.")
+	} else {
+		fmt.Println("Element not found in the array.")
+	}
+
+	edgeDevice.Status.WirelessDevices = append(edgeDevice.Status.WirelessDevices, connectedDevice)
+
+	// // Update the EdgeDevice CR
+	err := c.Status().Update(context.TODO(), edgeDevice)
 	if err != nil {
 		fmt.Println(err.Error())
 
