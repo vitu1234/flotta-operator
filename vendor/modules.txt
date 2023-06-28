@@ -116,6 +116,10 @@ github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.4.0
 ## explicit
 github.com/docker/go-units
+# github.com/eclipse/paho.mqtt.golang v1.4.2
+## explicit; go 1.14
+github.com/eclipse/paho.mqtt.golang
+github.com/eclipse/paho.mqtt.golang/packets
 # github.com/evanphx/json-patch v4.12.0+incompatible
 ## explicit
 github.com/evanphx/json-patch
@@ -215,6 +219,9 @@ github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/jsonschema
 github.com/googleapis/gnostic/openapiv2
+# github.com/gorilla/websocket v1.4.2
+## explicit; go 1.12
+github.com/gorilla/websocket
 # github.com/hashicorp/errwrap v1.0.0
 ## explicit
 github.com/hashicorp/errwrap
@@ -304,7 +311,6 @@ github.com/openshift/api/route/v1
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
-github.com/pmezard/go-difflib/difflib
 # github.com/prometheus/client_golang v1.11.0
 ## explicit; go 1.13
 github.com/prometheus/client_golang/prometheus
@@ -332,11 +338,8 @@ github.com/sirupsen/logrus
 github.com/spf13/pflag
 # github.com/stretchr/objx v0.2.0
 ## explicit; go 1.12
-github.com/stretchr/objx
 # github.com/stretchr/testify v1.7.0
 ## explicit; go 1.13
-github.com/stretchr/testify/assert
-github.com/stretchr/testify/mock
 # go.mongodb.org/mongo-driver v1.4.3
 ## explicit; go 1.10
 go.mongodb.org/mongo-driver/bson
@@ -393,6 +396,9 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
+# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+## explicit
+golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20220207234003-57398862261d
 ## explicit; go 1.17
 golang.org/x/sys/execabs

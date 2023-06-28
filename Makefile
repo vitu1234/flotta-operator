@@ -168,6 +168,8 @@ run: manifests pre-build ## Run a controller from your host.
 
 http-api-run: ## Run HTTP API in localhost
 	METRICS_ADDR=":8089" go run cmd/httpapi/main.go
+mqtt-run: ## Run MQTT API in localhost
+	METRICS_ADDR=":8089" go run cmd/mqtt/main.go
 
 docker-build: ## Build docker image with the manager.
 	$(DOCKER) build -f build/manager/Dockerfile -t ${IMG} .

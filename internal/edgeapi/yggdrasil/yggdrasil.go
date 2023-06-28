@@ -182,23 +182,20 @@ func (h *Handler) PostDataMessageForDevice(ctx context.Context, params yggdrasil
 	logger := h.logger.With("DeviceID", deviceID)
 	msg := params.Message
 
-	fmt.Println("HAHAHAHA" + msg.Directive)
-
-	// switch msg.Directive {
-	// case "registration", "enrolment":
-	// 	break
-	// default:
-	// 	if !IsOwnDevice(ctx, deviceID) {
-	// 		h.metrics.IncEdgeDeviceInvalidOwnerCounter()
-	// 		return operations.NewPostDataMessageForDeviceForbidden()
-	// 	}
-	// }
+	switch msg.Directive {
+	case "registration", "enrolment":
+		break
+	default:
+		if !IsOwnDevice(ctx, deviceID) {
+			h.metrics.IncEdgeDeviceInvalidOwnerCounter()
+			return operations.NewPostDataMessageForDeviceForbidden()
+		}
+	}
 	switch msg.Directive {
 	case "heartbeat":
 		fmt.Println("THIS IS HEARTBEAT")
 		hb := models.Heartbeat{}
 		contentJson, _ := json.Marshal(msg.Content)
-		fmt.Println("heartbeat++++")
 
 		err := json.Unmarshal(contentJson, &hb)
 		if err != nil {
@@ -206,7 +203,46 @@ func (h *Handler) PostDataMessageForDevice(ctx context.Context, params yggdrasil
 			return operations.NewPostDataMessageForDeviceBadRequest()
 		}
 
-		fmt.Println(hb)
+		fmt.Println("heartbeat++++")
+		fmt.Println(&hb)
+
+		// fmt.Printf(hb.Upgrade.LastUpgradeStatus)
+		var b strings.Builder
+		b.WriteString("Heartbeat:\n")
+		b.WriteString("Events:\n")
+		for i, event := range hb.Events {
+			b.WriteString(fmt.Sprintf("\tEvent %d:\n", i+1))
+			b.WriteString(fmt.Sprintf("\t\tField1: %v\n", event.Message))
+			b.WriteString(fmt.Sprintf("\t\tField2: %v\n", event.Type))
+			// Add more fields as needed
+		}
+
+		if hb.Hardware != nil {
+			b.WriteString("Hardware:\n")
+			b.WriteString(fmt.Sprintf("\tField1: %v\n", hb.Hardware.Hostname))
+			b.WriteString(fmt.Sprintf("\tField2: %v\n", hb.Hardware.SystemVendor))
+			// Add more fields as needed
+		}
+
+		b.WriteString(fmt.Sprintf("Status: %v\n", hb.Status))
+
+		if hb.Upgrade != nil {
+			b.WriteString("Upgrade:\n")
+			b.WriteString(fmt.Sprintf("\tField1: %v\n", hb.Upgrade.CurrentCommitID))
+			b.WriteString(fmt.Sprintf("\tField2: %v\n", hb.Upgrade.LastUpgradeStatus))
+			// Add more fields as needed
+		}
+
+		b.WriteString(fmt.Sprintf("Version: %v\n", hb.Version))
+
+		b.WriteString("Workloads:\n")
+		for i, workload := range hb.Workloads {
+			b.WriteString(fmt.Sprintf("\tWorkload %d:\n", i+1))
+			b.WriteString(fmt.Sprintf("\t\tField1: %v\n", workload.Name))
+			b.WriteString(fmt.Sprintf("\t\tField2: %v\n", workload.Status))
+			// Add more fields as needed
+		}
+
 		err = h.heartbeatHandler.Process(ctx, deviceID, h.getNamespace(ctx), &hb)
 		if err != nil {
 			if errors.IsNotFound(err) {
@@ -217,7 +253,7 @@ func (h *Handler) PostDataMessageForDevice(ctx context.Context, params yggdrasil
 			return operations.NewPostDataMessageForDeviceInternalServerError()
 		}
 
-		// fmt.Println(h.)
+		fmt.Println(b.String())
 		h.metrics.RecordEdgeDevicePresence(h.getNamespace(ctx), deviceID)
 	case "enrolment":
 		fmt.Println("THIS IS ENROLMENT")

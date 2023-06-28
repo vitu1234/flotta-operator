@@ -3,11 +3,18 @@ package main
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
+
+	"log"
+	"math/rand"
+
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"github.com/kelseyhightower/envconfig"
 	obv1 "github.com/kube-object-storage/lib-bucket-provisioner/pkg/apis/objectbucket.io/v1alpha1"
@@ -18,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -38,6 +46,7 @@ import (
 	"github.com/project-flotta/flotta-operator/pkg/mtls"
 	"github.com/project-flotta/flotta-operator/restapi"
 	"github.com/project-flotta/flotta-operator/restapi/operations"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -48,6 +57,33 @@ var (
 	operatorNamespace = "flotta"
 	scheme            = runtime.NewScheme()
 )
+
+type Message struct {
+	FlottaDeviceID    string `json:"flotta_device_id"`
+	Event             string `json:"event"`
+	TenantID          string `json:"tenantId"`
+	TenantName        string `json:"tenantName"`
+	ApplicationID     string `json:"applicationId"`
+	ApplicationName   string `json:"applicationName"`
+	DeviceProfileID   string `json:"deviceProfileId"`
+	DeviceProfileName string `json:"deviceProfileName"`
+	DeviceName        string `json:"deviceName"`
+	DevEUI            string `json:"devEui"`
+	DevAddr           string `json:"devAddr"`
+	Data              string `json:"data"`
+	Confirmed         bool   `json:"confirmed"`
+	Latitude          string `json:"latitude"`
+	Longitude         string `json:"longitude"`
+	Bandwidth         int64  `json:"bandwidth"`
+	Frequency         int64  `json:"frequency"`
+	SpreadingFactor   int64  `json:"spreadingFactor"`
+	CodeRate          string `json:"codeRate"`
+	DeviceType        string `json:"device_type"`
+	Time              string `json:"time"`
+	RegionName        string `json:"region_name"`
+	Tags              string `json:"tags"`
+	LocationSource    string `json:"location_source"`
+}
 
 var Config edgeapi.Config
 
@@ -102,8 +138,8 @@ func main() {
 	}
 
 	opts := x509.VerifyOptions{
-		// Roots:         tlsConfig.ClientCAs,
-		// Intermediates: x509.NewCertPool(),
+		Roots:         tlsConfig.ClientCAs,
+		Intermediates: x509.NewCertPool(),
 	}
 
 	playbookExecutionRepository := playbookexecution.NewPlaybookExecutionRepository(c)
@@ -175,6 +211,10 @@ func main() {
 		logger.Errorf("cannot start http server: %w", err)
 		os.Exit(1)
 	}
+
+	go func() {
+		MqttHandler()
+	}()
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf(":%v", Config.HttpsPort),
@@ -253,4 +293,147 @@ func getClient(config *rest.Config, options client.Options) (client.Client, erro
 		Client:          c,
 		UncachedObjects: []client.Object{},
 	})
+}
+
+func MqttHandler() {
+
+	rand.Seed(time.Now().Unix())
+
+	str := "ThisIsaRandomString1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGJHJKLZCM"
+
+	shuff := []rune(str)
+
+	// Shuffling the string
+	rand.Shuffle(len(shuff), func(i, j int) {
+		shuff[i], shuff[j] = shuff[j], shuff[i]
+	})
+	client_id := string(shuff)
+
+	mqtt.DEBUG = log.New(os.Stdout, "", 0)
+	mqtt.ERROR = log.New(os.Stdout, "", 0)
+	opts := mqtt.NewClientOptions().AddBroker("tcp://localhost:1883").SetClientID(client_id)
+
+	opts.SetKeepAlive(60 * time.Second)
+	// Set the message callback handler
+	opts.SetDefaultPublishHandler(f)
+	opts.SetPingTimeout(1 * time.Second)
+
+	c := mqtt.NewClient(opts)
+	if token := c.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
+	}
+
+	// Subscribe to a topic
+	if token := c.Subscribe("device/up", 0, nil); token.Wait() && token.Error() != nil {
+		fmt.Println(token.Error())
+		os.Exit(1)
+	}
+
+	// Publish a message
+	token := c.Publish("testtopic/1", 0, false, "Hello World")
+	token.Wait()
+
+	time.Sleep(6 * time.Second)
+
+}
+
+func processMqttData(payload string) {
+
+	// Remove potential leading/trailing whitespaces or newlines
+	payload = strings.TrimSpace(payload)
+
+	var message Message
+	err := json.Unmarshal([]byte(payload), &message)
+	if err != nil {
+		log.Printf("Failed to unmarshal JSON: %s", err)
+		return
+	}
+
+	// Access the parsed values
+	fmt.Printf("Received message:\n%+v\n", message.ApplicationName)
+	clientConfig, err := getRestConfig(Config.Kubeconfig)
+	if err != nil {
+		fmt.Errorf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
+		panic(err.Error())
+	}
+
+	// Create a new Kubernetes client
+	clientset, err := kubernetes.NewForConfig(clientConfig)
+	if err != nil {
+		log.Fatalf("Failed to create Kubernetes client: %v", err)
+	}
+	c, err := getClient(clientConfig, client.Options{Scheme: scheme})
+
+	// Get a list of all namespaces
+	nsList, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		log.Fatalf("Failed to get namespaces: %v", err)
+	}
+	edgeDevice := &managementv1alpha1.EdgeDevice{}
+	// getall namespaces and get device details
+	for _, ns := range nsList.Items {
+		fmt.Println(ns.Name + " -> " + message.FlottaDeviceID)
+
+		err = c.Get(context.Background(), client.ObjectKey{
+			Namespace: ns.Name,
+			Name:      message.FlottaDeviceID,
+		}, edgeDevice)
+
+		if err != nil {
+			fmt.Println(err.Error())
+
+		} else {
+			fmt.Println("EDGE DEVICE FOUND: " + ns.Name + "  " + message.FlottaDeviceID)
+			processDevice(message, edgeDevice, c)
+			return
+		}
+
+	}
+
+	// return
+}
+
+func processDevice(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client) {
+
+	edgeDevice.Status.Hardware.ConnectedWirelessDevices.WirelessInterfaceType = managementv1alpha1.WirelessInterfaceTypeLora
+	wirelessInfo := edgeDevice.Status.Hardware.ConnectedWirelessDevices.WirelessDeviceInfo
+	wirelessInfo.TenantId = msg.TenantID
+	wirelessInfo.TenantName = msg.TenantName
+	wirelessInfo.ApplicationId = msg.ApplicationID
+	wirelessInfo.ApplicationName = msg.ApplicationName
+	wirelessInfo.DeviceProfileId = msg.DeviceProfileID
+	wirelessInfo.DeviceProfileName = msg.DeviceProfileName
+	wirelessInfo.DeviceName = msg.DeviceName
+	wirelessInfo.DevEui = msg.DevEUI
+	wirelessInfo.DevAddr = msg.DevAddr
+	wirelessInfo.Data = msg.Data
+	wirelessInfo.Confirmed = msg.Confirmed
+	wirelessInfo.Location.Latitude = msg.Latitude
+	wirelessInfo.Location.Longitude = msg.Longitude
+	wirelessInfo.Region.Bandwidth = msg.Bandwidth
+	wirelessInfo.TransmitInfo.Frequency = msg.Frequency
+	wirelessInfo.TransmitInfo.SpreadingFactor = msg.SpreadingFactor
+	wirelessInfo.TransmitInfo.CodeRate = msg.CodeRate
+	wirelessInfo.LastSeen = msg.Time
+	wirelessInfo.Region.RegionName = msg.RegionName
+	wirelessInfo.Location.LocationSource = msg.LocationSource
+
+	// Update the EdgeDevice CR
+	err := c.Update(context.TODO(), edgeDevice)
+	if err != nil {
+		fmt.Println(err.Error())
+
+		fmt.Println("error")
+		return
+	}
+}
+
+var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+	fmt.Printf("TOPIC: %s\n", msg.Topic())
+
+	if msg.Topic() == "device/up" {
+		fmt.Printf("MSG: %s\n", msg.Payload())
+		payload := string(msg.Payload())
+		processMqttData(payload)
+	}
 }
