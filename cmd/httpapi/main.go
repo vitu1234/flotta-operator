@@ -14,9 +14,20 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	obv1 "github.com/kube-object-storage/lib-bucket-provisioner/pkg/apis/objectbucket.io/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
+	managementv1alpha1 "github.com/project-flotta/flotta-operator/api/v1alpha1"
+	"github.com/project-flotta/flotta-operator/internal/common/metrics"
+	"github.com/project-flotta/flotta-operator/internal/common/repository/edgedevice"
+	"github.com/project-flotta/flotta-operator/internal/common/repository/playbookexecution"
+	"github.com/project-flotta/flotta-operator/internal/edgeapi"
+	"github.com/project-flotta/flotta-operator/internal/edgeapi/backend/factory"
+	"github.com/project-flotta/flotta-operator/internal/edgeapi/yggdrasil"
+	"github.com/project-flotta/flotta-operator/pkg/mtls"
+	"github.com/project-flotta/flotta-operator/restapi"
+	"github.com/project-flotta/flotta-operator/restapi/operations"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -34,17 +45,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
-
-	managementv1alpha1 "github.com/project-flotta/flotta-operator/api/v1alpha1"
-	"github.com/project-flotta/flotta-operator/internal/common/metrics"
-	"github.com/project-flotta/flotta-operator/internal/common/repository/edgedevice"
-	"github.com/project-flotta/flotta-operator/internal/common/repository/playbookexecution"
-	"github.com/project-flotta/flotta-operator/internal/edgeapi"
-	"github.com/project-flotta/flotta-operator/internal/edgeapi/backend/factory"
-	"github.com/project-flotta/flotta-operator/internal/edgeapi/yggdrasil"
-	"github.com/project-flotta/flotta-operator/pkg/mtls"
-	"github.com/project-flotta/flotta-operator/restapi"
-	"github.com/project-flotta/flotta-operator/restapi/operations"
 )
 
 const (
@@ -57,30 +57,42 @@ var (
 )
 
 type Message struct {
-	FlottaDeviceID    string `json:"flotta_device_id"`
-	Event             string `json:"event"`
-	TenantID          string `json:"tenantId"`
-	TenantName        string `json:"tenantName"`
-	ApplicationID     string `json:"applicationId"`
-	ApplicationName   string `json:"applicationName"`
-	DeviceProfileID   string `json:"deviceProfileId"`
-	DeviceProfileName string `json:"deviceProfileName"`
-	DeviceName        string `json:"deviceName"`
-	DevEUI            string `json:"devEui"`
-	DevAddr           string `json:"devAddr"`
-	Data              string `json:"data"`
-	Confirmed         bool   `json:"confirmed"`
-	Latitude          string `json:"latitude"`
-	Longitude         string `json:"longitude"`
-	Bandwidth         int64  `json:"bandwidth"`
-	Frequency         int64  `json:"frequency"`
-	SpreadingFactor   int64  `json:"spreadingFactor"`
-	CodeRate          string `json:"codeRate"`
-	DeviceType        string `json:"device_type"`
-	Time              string `json:"time"`
-	RegionName        string `json:"region_name"`
-	Tags              string `json:"tags"`
-	LocationSource    string `json:"location_source"`
+	FlottaDeviceID    string                 `json:"flotta_device_id"`
+	EventType         string                 `json:"event"`
+	TenantID          string                 `json:"tenantId"`
+	TenantName        string                 `json:"tenantName"`
+	ApplicationID     string                 `json:"applicationId"`
+	ApplicationName   string                 `json:"applicationName"`
+	DeviceProfileID   string                 `json:"deviceProfileId"`
+	DeviceProfileName string                 `json:"deviceProfileName"`
+	DeviceName        string                 `json:"deviceName"`
+	DevEUI            string                 `json:"devEui"`
+	DevAddr           string                 `json:"devAddr"`
+	Data              map[string]interface{} `json:"data"`
+	Confirmed         bool                   `json:"confirmed"`
+	Latitude          string                 `json:"latitude"`
+	Longitude         string                 `json:"longitude"`
+	Bandwidth         int64                  `json:"bandwidth"`
+	Frequency         int64                  `json:"frequency"`
+	SpreadingFactor   int64                  `json:"spreadingFactor"`
+	CodeRate          string                 `json:"codeRate"`
+	DeviceType        string                 `json:"device_type"`
+	Time              string                 `json:"time"`
+	RegionName        string                 `json:"region_name"`
+	LocationSource    string                 `json:"location_source"`
+	BatteryLevel      string                 `json:"batteryLevel"`
+	Tags              map[string]interface{} `json:"tags"`
+	Measurement       string                 `json:"measurement"`
+}
+
+type TagsArray struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+type DataArray struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 var Config edgeapi.Config
@@ -307,9 +319,9 @@ func MqttHandler() {
 	})
 	client_id := string(shuff)
 
-	mqtt.DEBUG = log.New(os.Stdout, "", 0)
-	mqtt.ERROR = log.New(os.Stdout, "", 0)
-	opts := mqtt.NewClientOptions().AddBroker("tcp://localhost:1883").SetClientID(client_id)
+	// mqtt.DEBUG = log.New(os.Stdout, "", 0)
+	// mqtt.ERROR = log.New(os.Stdout, "", 0)
+	opts := mqtt.NewClientOptions().AddBroker(Config.MqttBroker).SetClientID(client_id)
 
 	opts.SetKeepAlive(60 * time.Second)
 	// Set the message callback handler
@@ -348,10 +360,10 @@ func processMqttData(payload string) {
 	}
 
 	// Access the parsed values
-	fmt.Printf("Received message:\n%+v\n", message.ApplicationName)
+	// log.Printf("Received message:\n%+v\n", message.ApplicationName)
 	clientConfig, err := getRestConfig(Config.Kubeconfig)
 	if err != nil {
-		fmt.Printf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
+		log.Printf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
 		// panic(err.Error())
 	}
 
@@ -362,18 +374,26 @@ func processMqttData(payload string) {
 	}
 	c, err := getClient(clientConfig, client.Options{Scheme: scheme})
 	if err != nil {
-		fmt.Printf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
+		log.Printf("Cannot prepare k8s client config: %v. Kubeconfig was: %s", err, Config.Kubeconfig)
 	}
+
+	// Create a client
+	// You can generate an API Token from the "API Tokens Tab" in the UI
+	clientInflux := influxdb2.NewClient("http://192.168.13.202", "crq7nWaazRRAxlD6ZRVlWM7YXKDGiVuz")
+	// always close client at the end
+	// defer clientInflux.Close()
 
 	// Get a list of all namespaces
 	nsList, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		log.Fatalf("Failed to get namespaces: %v", err)
 	}
+
+	// log.Println("DEVICEID" + " -> " + message.FlottaDeviceID)
 	edgeDevice := &managementv1alpha1.EdgeDevice{}
 	// getall namespaces and get device details
 	for _, ns := range nsList.Items {
-		fmt.Println(ns.Name + " -> " + message.FlottaDeviceID)
+		log.Println(ns.Name + " -> " + message.FlottaDeviceID)
 
 		err = c.Get(context.Background(), client.ObjectKey{
 			Namespace: ns.Name,
@@ -381,12 +401,17 @@ func processMqttData(payload string) {
 		}, edgeDevice)
 
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 
 		} else {
-			fmt.Println("EDGE DEVICE FOUND: " + ns.Name + "  " + message.FlottaDeviceID)
-			processDevice(message, edgeDevice, c)
-			return
+			if message.DeviceType == "Lora" {
+				processDeviceLora(message, edgeDevice, c)
+				return
+			} else {
+				processDeviceWiFi(message, edgeDevice, c)
+				return
+			}
+
 		}
 
 	}
@@ -394,13 +419,108 @@ func processMqttData(payload string) {
 	// return
 }
 
-func processDevice(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client) {
+func processDeviceWiFi(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client) {
+
+	fmt.Println("WIFi Function")
+	// Extract the values
+	fields := msg.Data
+	tags := msg.Tags
+	// measurement := msg.Measurement
+
+	connectedDevice := &managementv1alpha1.WirelessDevices{
+		WirelessInterfaceType: managementv1alpha1.WirelessInterfaceTypeWiFi,
+	}
+
+	for key, value := range fields {
+		strValue, ok := value.(string)
+		if !ok {
+			// Handle the case when the value is not a string
+			fmt.Printf("Warning: Value for key '%s' is not a string\n", key)
+			continue
+		}
+		dataItem := managementv1alpha1.DataArray{
+			Name:  key,
+			Value: strValue,
+		}
+		connectedDevice.WirelessDeviceInfo.Data = append(connectedDevice.WirelessDeviceInfo.Data, dataItem)
+	}
+
+	for key, value := range tags {
+		strValue, ok := value.(string)
+		if !ok {
+			// Handle the case when the value is not a string
+			fmt.Printf("Warning: Value for key '%s' is not a string\n", key)
+			continue
+		}
+		dataItem := managementv1alpha1.TagsArray{
+			Name:  key,
+			Value: strValue,
+		}
+		connectedDevice.WirelessDeviceInfo.Tags = append(connectedDevice.WirelessDeviceInfo.Tags, dataItem)
+	}
+
+	//add device to Spec
+	y := -1
+	for i, device := range edgeDevice.Spec.WirelessDevices {
+		if device.WirelessDeviceInfo.DevEui == msg.DevEUI {
+			y = i
+			break
+		}
+	}
+
+	if y != -1 {
+		// edgeDevice.Spec.WirelessDevices = append(edgeDevice.Status.WirelessDevices[:y], edgeDevice.Status.WirelessDevices[y+1:]...)
+		log.Println("End node already added on the SPecs.")
+	} else {
+		edgeDevice.Status.WirelessDevices = append(edgeDevice.Spec.WirelessDevices, connectedDevice)
+		log.Println("End node added now on the SPecs.")
+	}
+
+	err := c.Update(context.TODO(), edgeDevice)
+	if err != nil {
+		log.Println(err.Error())
+
+		log.Println("error")
+		return
+	}
+
+	//add device to Status
+	index := -1
+	for i, device := range edgeDevice.Status.WirelessDevices {
+		if device.WirelessDeviceInfo.DevEui == msg.DevEUI {
+			index = i
+			break
+		}
+	}
+
+	if index != -1 {
+		edgeDevice.Status.WirelessDevices = append(edgeDevice.Status.WirelessDevices[:index], edgeDevice.Status.WirelessDevices[index+1:]...)
+		log.Println("Element removed from the array.")
+	} else {
+		log.Println("Element not found in the array.")
+	}
+
+	edgeDevice.Status.WirelessDevices = append(edgeDevice.Status.WirelessDevices, connectedDevice)
+
+	// // Update the EdgeDevice CR
+	err = c.Status().Update(context.TODO(), edgeDevice)
+	if err != nil {
+		log.Println(err.Error())
+
+		log.Println("error")
+		return
+	}
+}
+
+func processDeviceLora(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client) {
 
 	connectedDevice := &managementv1alpha1.WirelessDevices{
 		WirelessInterfaceType: managementv1alpha1.WirelessInterfaceTypeLora,
 		WirelessDeviceInfo: managementv1alpha1.WirelessDeviceInfo{
+			EventType:         msg.EventType,
+			BatteryLevel:      msg.BatteryLevel,
 			TenantId:          msg.TenantID,
-			TenantName:        "VitudnbdhdhdhTenantName",
+			TenantName:        msg.TenantName,
 			ApplicationId:     msg.ApplicationID,
 			ApplicationName:   msg.ApplicationName,
 			DeviceProfileId:   msg.DeviceProfileID,
@@ -408,6 +528,8 @@ func processDevice(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c cli
 			DeviceName:        msg.DeviceName,
 			DevEui:            msg.DevEUI,
 			DevAddr:           msg.DevAddr,
+			// Data:              msg.Data,
+			// Tags:              msg.Tags,
 			Location: managementv1alpha1.Location{
 				Latitude:  msg.Latitude,
 				Longitude: msg.Longitude,
@@ -433,9 +555,9 @@ func processDevice(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c cli
 
 	if index != -1 {
 		edgeDevice.Status.WirelessDevices = append(edgeDevice.Status.WirelessDevices[:index], edgeDevice.Status.WirelessDevices[index+1:]...)
-		fmt.Println("Element removed from the array.")
+		log.Println("Element removed from the array.")
 	} else {
-		fmt.Println("Element not found in the array.")
+		log.Println("Element not found in the array.")
 	}
 
 	edgeDevice.Status.WirelessDevices = append(edgeDevice.Status.WirelessDevices, connectedDevice)
@@ -443,15 +565,15 @@ func processDevice(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c cli
 	// // Update the EdgeDevice CR
 	err := c.Status().Update(context.TODO(), edgeDevice)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 
-		fmt.Println("error")
+		log.Println("error")
 		return
 	}
 }
 
 var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("TOPIC: %s\n", msg.Topic())
+	// fmt.Printf("TOPIC: %s\n", msg.Topic())
 
 	if msg.Topic() == "device/up" {
 		fmt.Printf("MSG: %s\n", msg.Payload())

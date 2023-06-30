@@ -51,7 +51,7 @@ if [ ! -f "$FLOTTA_DASHBOARD" ]; then
   exit 1
 fi
 
-GRAFANA_OPERATOR=grafana-operator.v4.2.0
+GRAFANA_OPERATOR=grafana-operator.v5.0.1
 
 # Deploy Grafana operator
 kubectl apply -f - <<EOF
@@ -72,7 +72,7 @@ metadata:
   name: grafana-operator
   namespace: flotta
 spec:
-  channel: v4
+  channel: v5
   installPlanApproval: Automatic
   name: grafana-operator
   source: community-operators
@@ -82,7 +82,7 @@ EOF
 
 kubectl wait subscription -n flotta grafana-operator --for condition=CatalogSourcesUnhealthy=False --timeout=60s
 echo "Waiting for Grafana operator to be ready"
-while [ "$(kubectl get csv -n flotta ${GRAFANA_OPERATOR} -o jsonpath='{.status.phase}')" != "Succeeded" ]; do
+while [ "$(kubectl get csv -n flotta grafana-operator.v5.0.2 -o jsonpath='{.status.phase}')" != "Succeeded" ]; do
     echo -n "."
     sleep 5
 done
@@ -127,7 +127,7 @@ apiVersion: integreatly.org/v1alpha1
 kind: GrafanaDataSource
 metadata:
   name: flotta-datasource
-  namespace: flotta
+  namespace: default
 spec:
   datasources:
     - access: proxy
@@ -139,9 +139,9 @@ spec:
         tlsSkipVerify: true
       name: Prometheus
       secureJsonData:
-        httpHeaderValue1: 'Bearer ${BEARER_TOKEN}'
+        httpHeaderValue1: 'Bearer TksImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJkZWZhdWx0Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6ImdyYWZhbmEtc2VydmljZWFjY291bnQiLCJ1aWQiOiJkYzdlMzUyNi1jMzExLTRiNWMtOWIyMS00YjJiYWE5YTM2Y2EifX0sIm5iZiI6MTY4ODA0NzA5OSwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OmRlZmF1bHQ6Z3JhZmFuYS1zZXJ2aWNlYWNjb3VudCJ9.DP0uhDW3UXXPKLxT8HosvM6Jlsu3zDqvZBmXVaekWm7u_1hkpv6rlkN0S-7o72J7r1_DK1I5TC3nvICUGDeUWs9fiDXsxLjyXO3VzVrY1pqAMUbPrXjpJCPpykGJiKsj9hyHA1g9RO0sQ-9LNsU2AfW-c77XCGzDQOoKZgI3HtAJj9RRk7wIkKdDCTGHZT2Nf9I2QgbzOsklY5v7xNuMVo3gLEALbj8TcrQuTKJTQgwph_dLKhX11W_h4TQz_JUhqjn9YUiRL7D5BE2tPkzSOTMdLiqb3BvCSsxNmi5Dd83NgEjN3apIF-H1pMph4UzMDAhxtd6Y-FfQZ1E6pg-Uog'
       type: prometheus
-      url: 'https://thanos-querier.openshift-monitoring.svc.cluster.local:9091'
+      url: 'https://thanos-querier.default.svc.cluster.local:9090'
   name: prometheus-grafanadatasource.yaml
 EOF
 

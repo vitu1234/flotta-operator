@@ -29,8 +29,8 @@ type EdgeDeviceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// OsInformation carries information about commit ID of the OS Image deployed to the device
-	OsInformation *OsInformation `json:"osInformation,omitempty"`
-
+	OsInformation   *OsInformation     `json:"osInformation,omitempty"`
+	WirelessDevices []*WirelessDevices `json:"connectedWirelessDevices,omitempty"`
 	// RequestTime is the time of device registration request
 	RequestTime *metav1.Time `json:"requestTime,omitempty"`
 
@@ -457,10 +457,23 @@ type WirelessDeviceInfo struct {
 	Location          Location     `json:"location,omitempty"`
 	Region            Region       `json:"region,omitempty"`
 	TransmitInfo      TransmitInfo `json:"transmitInfo,omitempty"`
-	Battery           string       `json:"battery,omitempty"`
-	Data              string       `json:"data,omitempty"`
+	BatteryLevel      string       `json:"batteryLevel,omitempty"`
+	Data              []DataArray  `json:"dataVariables,omitempty"`
 	Confirmed         bool         `json:"confirmed,omitempty"`
 	LastSeen          string       `json:"lastSeen,omitempty"`
+
+	Tags      []TagsArray `json:"tags,omitempty"`
+	EventType string      `json:"eventType,omitempty"`
+}
+
+type TagsArray struct {
+	Name  string `json:"name,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+type DataArray struct {
+	Name  string `json:"name,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 type Location struct {
