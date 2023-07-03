@@ -14,20 +14,10 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/influxdata/influxdb-client-go/v2"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kelseyhightower/envconfig"
 	obv1 "github.com/kube-object-storage/lib-bucket-provisioner/pkg/apis/objectbucket.io/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
-	managementv1alpha1 "github.com/project-flotta/flotta-operator/api/v1alpha1"
-	"github.com/project-flotta/flotta-operator/internal/common/metrics"
-	"github.com/project-flotta/flotta-operator/internal/common/repository/edgedevice"
-	"github.com/project-flotta/flotta-operator/internal/common/repository/playbookexecution"
-	"github.com/project-flotta/flotta-operator/internal/edgeapi"
-	"github.com/project-flotta/flotta-operator/internal/edgeapi/backend/factory"
-	"github.com/project-flotta/flotta-operator/internal/edgeapi/yggdrasil"
-	"github.com/project-flotta/flotta-operator/pkg/mtls"
-	"github.com/project-flotta/flotta-operator/restapi"
-	"github.com/project-flotta/flotta-operator/restapi/operations"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -45,6 +35,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+
+	managementv1alpha1 "github.com/project-flotta/flotta-operator/api/v1alpha1"
+	"github.com/project-flotta/flotta-operator/internal/common/metrics"
+	"github.com/project-flotta/flotta-operator/internal/common/repository/edgedevice"
+	"github.com/project-flotta/flotta-operator/internal/common/repository/playbookexecution"
+	"github.com/project-flotta/flotta-operator/internal/edgeapi"
+	"github.com/project-flotta/flotta-operator/internal/edgeapi/backend/factory"
+	"github.com/project-flotta/flotta-operator/internal/edgeapi/yggdrasil"
+	"github.com/project-flotta/flotta-operator/pkg/mtls"
+	"github.com/project-flotta/flotta-operator/restapi"
+	"github.com/project-flotta/flotta-operator/restapi/operations"
 )
 
 const (
@@ -379,9 +380,10 @@ func processMqttData(payload string) {
 
 	// Create a client
 	// You can generate an API Token from the "API Tokens Tab" in the UI
-	clientInflux := influxdb2.NewClient("http://192.168.13.202", "crq7nWaazRRAxlD6ZRVlWM7YXKDGiVuz")
+	clientInflux := influxdb2.NewClient(Config.InfluxDbHost, Config.InfluxDbToken)
 	// always close client at the end
 	// defer clientInflux.Close()
+	defer clientInflux.Close()
 
 	// Get a list of all namespaces
 	nsList, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
@@ -405,10 +407,10 @@ func processMqttData(payload string) {
 
 		} else {
 			if message.DeviceType == "Lora" {
-				processDeviceLora(message, edgeDevice, c)
+				processDeviceLora(message, edgeDevice, c, clientInflux)
 				return
 			} else {
-				processDeviceWiFi(message, edgeDevice, c)
+				processDeviceWiFi(message, edgeDevice, c, clientInflux)
 				return
 			}
 
@@ -419,7 +421,7 @@ func processMqttData(payload string) {
 	// return
 }
 
-func processDeviceWiFi(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client) {
+func processDeviceWiFi(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client, influxdbClient influxdb2.Client) {
 
 	fmt.Println("WIFi Function")
 	// Extract the values
@@ -510,9 +512,32 @@ func processDeviceWiFi(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c
 		log.Println("error")
 		return
 	}
+
+	timestamp := time.Now()
+	writeAPI := influxdbClient.WriteAPI("influxdata", "default")
+
+	p := influxdb2.NewPointWithMeasurement("stat").
+		SetTime(timestamp)
+
+	for key, value := range msg.Data {
+		if value != nil {
+			p.AddField(strings.ReplaceAll(key, " ", "_"), value) // Replace spaces with underscores in field keys
+		}
+	}
+
+	for key, value := range msg.Tags {
+		if value != nil {
+			p.AddTag(strings.ReplaceAll(key, " ", "_"), fmt.Sprintf("%v", value)) // Replace spaces with underscores in tag keys
+			p.AddTag("Network", "WiFi")
+		}
+	}
+
+	writeAPI.WritePoint(p)
+	writeAPI.Flush()
+
 }
 
-func processDeviceLora(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client) {
+func processDeviceLora(msg Message, edgeDevice *managementv1alpha1.EdgeDevice, c client.Client, influxdbClient influxdb2.Client) {
 
 	connectedDevice := &managementv1alpha1.WirelessDevices{
 		WirelessInterfaceType: managementv1alpha1.WirelessInterfaceTypeLora,
