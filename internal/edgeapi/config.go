@@ -35,4 +35,9 @@ type Config struct {
 
 	// RemoteBackendTimeout specifies timeout. Has to be parsable to time.Duration
 	RemoteBackendTimeout time.Duration `envconfig:"REMOTE_BACKEND_TIMEOUT" default:"5s"`
+
+	// RemoteBackendTimeout specifies timeout. Has to be parsable to time.Duration
+	MqttBroker    string `envconfig:"MQTTHOST" default:"tcp://192.168.13.203:1883"`
+	InfluxDbHost  string `envconfig:"INFLUXDBHOST" default:"http://192.168.13.202"`
+	InfluxDbToken string `envconfig:"INFLUXDBTOKEN" default:"crq7nWaazRRAxlD6ZRVlWM7YXKDGiVuz"`
 }

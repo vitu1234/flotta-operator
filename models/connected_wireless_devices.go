@@ -7,6 +7,7 @@ package models
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -16,220 +17,57 @@ import (
 // ConnectedWirelessDevices connected wireless devices
 //
 // swagger:model connected_wireless_devices
-type ConnectedWirelessDevices struct {
-
-	// lorawan property for organization or team apps
-	ApplicationID string `json:"application_id,omitempty"`
-
-	// lorawan property for an application
-	ApplicationName string `json:"application_name,omitempty"`
-
-	// percentage of battery
-	Battery string `json:"battery,omitempty"`
-
-	// if device is registered on the network
-	Confirmed bool `json:"confirmed,omitempty"`
-
-	// data sent by the connected device
-	Data string `json:"data,omitempty"`
-
-	// device address
-	DevAddr string `json:"dev_addr,omitempty"`
-
-	// uniquie identifier of the device
-	DevEui string `json:"dev_eui,omitempty"`
-
-	// connected device name
-	DeviceName string `json:"device_name,omitempty"`
-
-	// lorawan property for a lora device profile
-	DeviceProfileID string `json:"device_profile_id,omitempty"`
-
-	// lorawan property device template
-	DeviceProfileName string `json:"device_profile_name,omitempty"`
-
-	// last time the device connected
-	LastSeen string `json:"last_seen,omitempty"`
-
-	// location
-	Location *Location `json:"location,omitempty"`
-
-	// region
-	Region *Region `json:"region,omitempty"`
-
-	// unique identifier for lorawan property based on organizations or teams
-	TenantID string `json:"tenant_id,omitempty"`
-
-	// lorawan property based on for name of organizations or teams
-	TenantName string `json:"tenant_name,omitempty"`
-
-	// transmit info
-	TransmitInfo *TransmitInfo `json:"transmit_info,omitempty"`
-}
+type ConnectedWirelessDevices []*WirelessDeviceInfo
 
 // Validate validates this connected wireless devices
-func (m *ConnectedWirelessDevices) Validate(formats strfmt.Registry) error {
+func (m ConnectedWirelessDevices) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateLocation(formats); err != nil {
-		res = append(res, err)
-	}
+	for i := 0; i < len(m); i++ {
+		if swag.IsZero(m[i]) { // not required
+			continue
+		}
 
-	if err := m.validateRegion(formats); err != nil {
-		res = append(res, err)
-	}
+		if m[i] != nil {
+			if err := m[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName(strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName(strconv.Itoa(i))
+				}
+				return err
+			}
+		}
 
-	if err := m.validateTransmitInfo(formats); err != nil {
-		res = append(res, err)
 	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *ConnectedWirelessDevices) validateLocation(formats strfmt.Registry) error {
-	if swag.IsZero(m.Location) { // not required
-		return nil
-	}
-
-	if m.Location != nil {
-		if err := m.Location.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("location")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("location")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *ConnectedWirelessDevices) validateRegion(formats strfmt.Registry) error {
-	if swag.IsZero(m.Region) { // not required
-		return nil
-	}
-
-	if m.Region != nil {
-		if err := m.Region.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("region")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("region")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *ConnectedWirelessDevices) validateTransmitInfo(formats strfmt.Registry) error {
-	if swag.IsZero(m.TransmitInfo) { // not required
-		return nil
-	}
-
-	if m.TransmitInfo != nil {
-		if err := m.TransmitInfo.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("transmit_info")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("transmit_info")
-			}
-			return err
-		}
-	}
-
 	return nil
 }
 
 // ContextValidate validate this connected wireless devices based on the context it is used
-func (m *ConnectedWirelessDevices) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+func (m ConnectedWirelessDevices) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateLocation(ctx, formats); err != nil {
-		res = append(res, err)
-	}
+	for i := 0; i < len(m); i++ {
 
-	if err := m.contextValidateRegion(ctx, formats); err != nil {
-		res = append(res, err)
-	}
+		if m[i] != nil {
+			if err := m[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName(strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName(strconv.Itoa(i))
+				}
+				return err
+			}
+		}
 
-	if err := m.contextValidateTransmitInfo(ctx, formats); err != nil {
-		res = append(res, err)
 	}
 
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *ConnectedWirelessDevices) contextValidateLocation(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.Location != nil {
-		if err := m.Location.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("location")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("location")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *ConnectedWirelessDevices) contextValidateRegion(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.Region != nil {
-		if err := m.Region.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("region")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("region")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (m *ConnectedWirelessDevices) contextValidateTransmitInfo(ctx context.Context, formats strfmt.Registry) error {
-
-	if m.TransmitInfo != nil {
-		if err := m.TransmitInfo.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("transmit_info")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("transmit_info")
-			}
-			return err
-		}
-	}
-
-	return nil
-}
-
-// MarshalBinary interface implementation
-func (m *ConnectedWirelessDevices) MarshalBinary() ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return swag.WriteJSON(m)
-}
-
-// UnmarshalBinary interface implementation
-func (m *ConnectedWirelessDevices) UnmarshalBinary(b []byte) error {
-	var res ConnectedWirelessDevices
-	if err := swag.ReadJSON(b, &res); err != nil {
-		return err
-	}
-	*m = res
 	return nil
 }

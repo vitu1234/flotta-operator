@@ -686,6 +686,10 @@ definitions:
         type: string
 
   connected_wireless_devices:
+    type: array
+    items:
+      $ref: '#/definitions/wireless_device_info'
+  wireless_device_info:
     type: object
     properties:
       tenant_id:

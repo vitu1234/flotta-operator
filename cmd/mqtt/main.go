@@ -3,15 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
 
-	"log"
-	"math/rand"
-
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-
 	obv1 "github.com/kube-object-storage/lib-bucket-provisioner/pkg/apis/objectbucket.io/v1alpha1"
 	routev1 "github.com/openshift/api/route/v1"
 	"go.uber.org/zap"

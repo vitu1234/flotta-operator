@@ -29,8 +29,8 @@ type EdgeDeviceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// OsInformation carries information about commit ID of the OS Image deployed to the device
-	OsInformation *OsInformation `json:"osInformation,omitempty"`
-
+	OsInformation   *OsInformation     `json:"osInformation,omitempty"`
+	WirelessDevices []*WirelessDevices `json:"connectedWirelessDevices,omitempty"`
 	// RequestTime is the time of device registration request
 	RequestTime *metav1.Time `json:"requestTime,omitempty"`
 
@@ -146,6 +146,8 @@ type EdgeDeviceStatus struct {
 	PlaybookExecutions        []PlaybookExec      `json:"PlaybookExec,omitempty"`
 	DataOBC                   *string             `json:"dataObc,omitempty"`
 	UpgradeInformation        *UpgradeInformation `json:"upgradeInformation,omitempty"`
+	//list connected wireless devices
+	WirelessDevices []*WirelessDevices `json:"connectedWirelessDevices,omitempty"`
 }
 
 type EdgeWorkloadPhase string
@@ -208,9 +210,6 @@ type Hardware struct {
 
 	// list of all mounts found on edgedevice
 	Mounts []*Mount `json:"mounts,omitempty"`
-
-	//list connected wireless devices
-	ConnectedWirelessDevices ConnectedWirelessDevices `json:"connectedWirelessDevices,omitempty"`
 }
 
 type Boot struct {
@@ -430,11 +429,11 @@ type Mount struct {
 	Options string `json:"options,omitempty"`
 }
 
-type ConnectedWirelessDevices struct {
+type WirelessDevices struct {
 	WirelessInterfaceType WirelessInterfaceType `json:"wirelessInterfaceType"`
-	WirelessDeviceInfo    WirelessDeviceInfo    `json:"wirelessDeviceInfo"`
+	WirelessDeviceInfo    WirelessDeviceInfo    `json:"wirelessDeviceInfo,omitempty"`
 	// models.HardwareInfo
-	// PreferedResources []PreferedResources `json:"preferredResources"`
+
 }
 type WirelessInterfaceType string
 
@@ -458,16 +457,29 @@ type WirelessDeviceInfo struct {
 	Location          Location     `json:"location,omitempty"`
 	Region            Region       `json:"region,omitempty"`
 	TransmitInfo      TransmitInfo `json:"transmitInfo,omitempty"`
-	Battery           string       `json:"battery,omitempty"`
-	Data              string       `json:"data,omitempty"`
+	BatteryLevel      string       `json:"batteryLevel,omitempty"`
+	Data              []DataArray  `json:"dataVariables,omitempty"`
 	Confirmed         bool         `json:"confirmed,omitempty"`
 	LastSeen          string       `json:"lastSeen,omitempty"`
+
+	Tags      []TagsArray `json:"tags,omitempty"`
+	EventType string      `json:"eventType,omitempty"`
+}
+
+type TagsArray struct {
+	Name  string `json:"name,omitempty"`
+	Value string `json:"value,omitempty"`
+}
+
+type DataArray struct {
+	Name  string `json:"name,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 type Location struct {
 	Longitude      string `json:"longitude,omitempty"`
 	Latitude       string `json:"latitude,omitempty"`
-	LocationSource string `json:"latitude,omitempty"`
+	LocationSource string `json:"locationSource,omitempty"`
 }
 
 type Region struct {

@@ -23,7 +23,7 @@ type HardwareInfo struct {
 	Boot *Boot `json:"boot,omitempty"`
 
 	// connected wireless devices
-	ConnectedWirelessDevices *ConnectedWirelessDevices `json:"connected_wireless_devices,omitempty"`
+	ConnectedWirelessDevices ConnectedWirelessDevices `json:"connected_wireless_devices,omitempty"`
 
 	// cpu
 	CPU *CPU `json:"cpu,omitempty"`
@@ -127,15 +127,13 @@ func (m *HardwareInfo) validateConnectedWirelessDevices(formats strfmt.Registry)
 		return nil
 	}
 
-	if m.ConnectedWirelessDevices != nil {
-		if err := m.ConnectedWirelessDevices.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("connected_wireless_devices")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("connected_wireless_devices")
-			}
-			return err
+	if err := m.ConnectedWirelessDevices.Validate(formats); err != nil {
+		if ve, ok := err.(*errors.Validation); ok {
+			return ve.ValidateName("connected_wireless_devices")
+		} else if ce, ok := err.(*errors.CompositeError); ok {
+			return ce.ValidateName("connected_wireless_devices")
 		}
+		return err
 	}
 
 	return nil
@@ -396,15 +394,13 @@ func (m *HardwareInfo) contextValidateBoot(ctx context.Context, formats strfmt.R
 
 func (m *HardwareInfo) contextValidateConnectedWirelessDevices(ctx context.Context, formats strfmt.Registry) error {
 
-	if m.ConnectedWirelessDevices != nil {
-		if err := m.ConnectedWirelessDevices.ContextValidate(ctx, formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("connected_wireless_devices")
-			} else if ce, ok := err.(*errors.CompositeError); ok {
-				return ce.ValidateName("connected_wireless_devices")
-			}
-			return err
+	if err := m.ConnectedWirelessDevices.ContextValidate(ctx, formats); err != nil {
+		if ve, ok := err.(*errors.Validation); ok {
+			return ve.ValidateName("connected_wireless_devices")
+		} else if ce, ok := err.(*errors.CompositeError); ok {
+			return ce.ValidateName("connected_wireless_devices")
 		}
+		return err
 	}
 
 	return nil

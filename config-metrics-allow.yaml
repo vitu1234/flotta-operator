@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: system-allow-list
+  # namespace: devices
+data:
+  metrics_list.yaml: |
+    names:
+      - node_disk_io_now
+      - node_memory_Mapped_bytes
+      - node_network_speed_bytes

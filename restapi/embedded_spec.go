@@ -263,69 +263,9 @@ func init() {
       }
     },
     "connected_wireless_devices": {
-      "type": "object",
-      "properties": {
-        "application_id": {
-          "description": "lorawan property for organization or team apps",
-          "type": "string"
-        },
-        "application_name": {
-          "description": "lorawan property for an application",
-          "type": "string"
-        },
-        "battery": {
-          "description": "percentage of battery",
-          "type": "string"
-        },
-        "confirmed": {
-          "description": "if device is registered on the network",
-          "type": "boolean"
-        },
-        "data": {
-          "description": "data sent by the connected device",
-          "type": "string"
-        },
-        "dev_addr": {
-          "description": "device address",
-          "type": "string"
-        },
-        "dev_eui": {
-          "description": "uniquie identifier of the device",
-          "type": "string"
-        },
-        "device_name": {
-          "description": "connected device name",
-          "type": "string"
-        },
-        "device_profile_id": {
-          "description": "lorawan property for a lora device profile",
-          "type": "string"
-        },
-        "device_profile_name": {
-          "description": "lorawan property device template",
-          "type": "string"
-        },
-        "last_seen": {
-          "description": "last time the device connected",
-          "type": "string"
-        },
-        "location": {
-          "$ref": "#/definitions/location"
-        },
-        "region": {
-          "$ref": "#/definitions/region"
-        },
-        "tenant_id": {
-          "description": "unique identifier for lorawan property based on organizations or teams",
-          "type": "string"
-        },
-        "tenant_name": {
-          "description": "lorawan property based on for name of organizations or teams",
-          "type": "string"
-        },
-        "transmit_info": {
-          "$ref": "#/definitions/transmit_info"
-        }
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/wireless_device_info"
       }
     },
     "container-metrics": {
@@ -1215,6 +1155,72 @@ func init() {
         }
       }
     },
+    "wireless_device_info": {
+      "type": "object",
+      "properties": {
+        "application_id": {
+          "description": "lorawan property for organization or team apps",
+          "type": "string"
+        },
+        "application_name": {
+          "description": "lorawan property for an application",
+          "type": "string"
+        },
+        "battery": {
+          "description": "percentage of battery",
+          "type": "string"
+        },
+        "confirmed": {
+          "description": "if device is registered on the network",
+          "type": "boolean"
+        },
+        "data": {
+          "description": "data sent by the connected device",
+          "type": "string"
+        },
+        "dev_addr": {
+          "description": "device address",
+          "type": "string"
+        },
+        "dev_eui": {
+          "description": "uniquie identifier of the device",
+          "type": "string"
+        },
+        "device_name": {
+          "description": "connected device name",
+          "type": "string"
+        },
+        "device_profile_id": {
+          "description": "lorawan property for a lora device profile",
+          "type": "string"
+        },
+        "device_profile_name": {
+          "description": "lorawan property device template",
+          "type": "string"
+        },
+        "last_seen": {
+          "description": "last time the device connected",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/definitions/location"
+        },
+        "region": {
+          "$ref": "#/definitions/region"
+        },
+        "tenant_id": {
+          "description": "unique identifier for lorawan property based on organizations or teams",
+          "type": "string"
+        },
+        "tenant_name": {
+          "description": "lorawan property based on for name of organizations or teams",
+          "type": "string"
+        },
+        "transmit_info": {
+          "$ref": "#/definitions/transmit_info"
+        }
+      }
+    },
     "workload": {
       "type": "object",
       "properties": {
@@ -1576,69 +1582,9 @@ func init() {
       }
     },
     "connected_wireless_devices": {
-      "type": "object",
-      "properties": {
-        "application_id": {
-          "description": "lorawan property for organization or team apps",
-          "type": "string"
-        },
-        "application_name": {
-          "description": "lorawan property for an application",
-          "type": "string"
-        },
-        "battery": {
-          "description": "percentage of battery",
-          "type": "string"
-        },
-        "confirmed": {
-          "description": "if device is registered on the network",
-          "type": "boolean"
-        },
-        "data": {
-          "description": "data sent by the connected device",
-          "type": "string"
-        },
-        "dev_addr": {
-          "description": "device address",
-          "type": "string"
-        },
-        "dev_eui": {
-          "description": "uniquie identifier of the device",
-          "type": "string"
-        },
-        "device_name": {
-          "description": "connected device name",
-          "type": "string"
-        },
-        "device_profile_id": {
-          "description": "lorawan property for a lora device profile",
-          "type": "string"
-        },
-        "device_profile_name": {
-          "description": "lorawan property device template",
-          "type": "string"
-        },
-        "last_seen": {
-          "description": "last time the device connected",
-          "type": "string"
-        },
-        "location": {
-          "$ref": "#/definitions/location"
-        },
-        "region": {
-          "$ref": "#/definitions/region"
-        },
-        "tenant_id": {
-          "description": "unique identifier for lorawan property based on organizations or teams",
-          "type": "string"
-        },
-        "tenant_name": {
-          "description": "lorawan property based on for name of organizations or teams",
-          "type": "string"
-        },
-        "transmit_info": {
-          "$ref": "#/definitions/transmit_info"
-        }
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/wireless_device_info"
       }
     },
     "container-metrics": {
@@ -2526,6 +2472,72 @@ func init() {
         },
         "last_upgrade_time": {
           "type": "string"
+        }
+      }
+    },
+    "wireless_device_info": {
+      "type": "object",
+      "properties": {
+        "application_id": {
+          "description": "lorawan property for organization or team apps",
+          "type": "string"
+        },
+        "application_name": {
+          "description": "lorawan property for an application",
+          "type": "string"
+        },
+        "battery": {
+          "description": "percentage of battery",
+          "type": "string"
+        },
+        "confirmed": {
+          "description": "if device is registered on the network",
+          "type": "boolean"
+        },
+        "data": {
+          "description": "data sent by the connected device",
+          "type": "string"
+        },
+        "dev_addr": {
+          "description": "device address",
+          "type": "string"
+        },
+        "dev_eui": {
+          "description": "uniquie identifier of the device",
+          "type": "string"
+        },
+        "device_name": {
+          "description": "connected device name",
+          "type": "string"
+        },
+        "device_profile_id": {
+          "description": "lorawan property for a lora device profile",
+          "type": "string"
+        },
+        "device_profile_name": {
+          "description": "lorawan property device template",
+          "type": "string"
+        },
+        "last_seen": {
+          "description": "last time the device connected",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/definitions/location"
+        },
+        "region": {
+          "$ref": "#/definitions/region"
+        },
+        "tenant_id": {
+          "description": "unique identifier for lorawan property based on organizations or teams",
+          "type": "string"
+        },
+        "tenant_name": {
+          "description": "lorawan property based on for name of organizations or teams",
+          "type": "string"
+        },
+        "transmit_info": {
+          "$ref": "#/definitions/transmit_info"
         }
       }
     },
